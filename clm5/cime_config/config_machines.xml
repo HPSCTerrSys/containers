@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 
 <config_machines version="2.0">
-    <machine MACH="clm5-docker">
+    <machine MACH="clm5-container">
         <DESC>CLM5 Docker container</DESC>
-        <NODENAME_REGEX>clm5-docker.*</NODENAME_REGEX>
+        <NODENAME_REGEX>.*</NODENAME_REGEX>
         <OS>LINUX</OS>
         <COMPILERS>gnu</COMPILERS>
         <MPILIBS compiler="gnu">openmpi</MPILIBS>
@@ -12,11 +12,11 @@
         <DIN_LOC_ROOT_CLMFORC>$ENV{CESMDATAROOT}/ForcingData</DIN_LOC_ROOT_CLMFORC>
         <DOUT_S_ROOT>$ENV{CESMDATAROOT}/Archive</DOUT_S_ROOT>
         <BASELINE_ROOT>$ENV{CESMDATAROOT}/BaselineTests</BASELINE_ROOT>
-        <CCSM_CPRNC>$CCSMROOT/tools/cprnc/build/cprnc</CCSM_CPRNC>
+        <CCSM_CPRNC>$ENV{CESMDATAROOT}/tools/cprnc/build/cprnc</CCSM_CPRNC>
         <GMAKE>make</GMAKE>
         <GMAKE_J>8</GMAKE_J>
         <BATCH_SYSTEM>none</BATCH_SYSTEM>
-        <SUPPORTED_BY>kvrigor</SUPPORTED_BY>
+        <SUPPORTED_BY>HPSCTerrSys</SUPPORTED_BY>
         <MAX_TASKS_PER_NODE>8</MAX_TASKS_PER_NODE>
         <MAX_MPITASKS_PER_NODE>8</MAX_MPITASKS_PER_NODE>
         <mpirun mpilib="default">

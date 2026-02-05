@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config_compilers version="2.0">
-    <compiler MACH="clm5-docker" COMPILER="gnu">
+    <compiler MACH="clm5-container" COMPILER="gnu">
         <NETCDF_PATH>/usr</NETCDF_PATH>
         <NETCDF_C_PATH>/usr</NETCDF_C_PATH>
         <NETCDF_FORTRAN_PATH>/usr</NETCDF_FORTRAN_PATH>
-        <PNETCDF_PATH>/usr/local</PNETCDF_PATH>
+        <PNETCDF_PATH>/usr</PNETCDF_PATH>
         <FFLAGS>
-            <append> -I/usr/lib64/gfortran/modules </append>
+            <append> -I/usr/lib64/gfortran/modules -fallow-argument-mismatch </append>
         </FFLAGS>
         <SLIBS>
             <append> -llapack -lblas </append>
