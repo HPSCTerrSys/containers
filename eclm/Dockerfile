@@ -57,4 +57,17 @@ make install
 cd / && rm -rvf $TMP
 EOF
 
+USER root
+WORKDIR /root
+RUN <<EOF
+echo "export CC=mpicc FC=mpif90 CXX=mpicxx"                    >> .bash_profile
+echo "export OMPI_ALLOW_RUN_AS_ROOT=1"                         >> .bash_profile
+echo "export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"                 >> .bash_profile
+echo "export PIP_BREAK_SYSTEM_PACKAGES=1"                      >> .bash_profile
+echo "export CMAKE_INSTALL_PREFIX=/root/.local"                >> .bash_profile
+echo "export LD_LIBRARY_PATH=/usr/local/lib:/root/.local/lib"  >> .bash_profile
+echo "export PATH=${PATH}:/root/.local/bin"                    >> .bash_profile
+echo "export SW=/root/.local"                                  >> .bash_profile
+mkdir -vp .local/{bin,lib}
+EOF
 CMD ["/bin/bash","-l"]
