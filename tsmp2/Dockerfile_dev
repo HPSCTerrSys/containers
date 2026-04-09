@@ -1,0 +1,33 @@
+# escape=`
+FROM hpscterrsys/tsmp2:0.2
+
+#
+# TODO: Specify image metadata following OCI format spec: https://github.com/opencontainers/image-spec/blob/main/spec.md
+#
+# LABEL ...
+
+
+# Install dev tools
+RUN <<EOF
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y vim gdb
+EOF
+
+# Dev environment presets
+USER root
+WORKDIR /root
+RUN <<EOF
+echo "export SYSTEMNAME=UBUNTU"                                >> .bash_profile
+echo "export CC=mpicc FC=mpif90 CXX=mpicxx"                    >> .bash_profile
+echo "export OMPI_ALLOW_RUN_AS_ROOT=1"                         >> .bash_profile
+echo "export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"                 >> .bash_profile
+echo "export PIP_BREAK_SYSTEM_PACKAGES=1"                      >> .bash_profile
+echo "export CMAKE_INSTALL_PREFIX=/root/.local"                >> .bash_profile
+echo "export LD_LIBRARY_PATH=/usr/local/lib:/root/.local/lib"  >> .bash_profile
+echo "export PATH=${PATH}:/root/.local/bin"                    >> .bash_profile
+echo "export SW=/root/.local"                                  >> .bash_profile
+echo "export EDITOR=vim"                                       >> .bash_profile
+mkdir -vp .local/{bin,lib}
+EOF
+CMD ["/bin/bash","-l"]
