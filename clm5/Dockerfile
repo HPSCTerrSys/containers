@@ -35,15 +35,8 @@ RUN cd /tmp `
     && make -j8 && make install `
     && cd / && rm -rvf ESMF_8_0_1.tar.gz esmf-ESMF_8_0_1
 
-# Add user account
-RUN groupadd hpscterrsys `
-    && useradd user -g hpscterrsys -m `
-    && usermod -aG hpscterrsys user `
-    && adduser user sudo `
-    && printf "clm\nclm" | passwd user
-
 # Set default envs
-RUN cd /home/user `
+RUN cd /root `
     && echo "export CC=$CC" >> .bash_profile `
     && echo "export FC=$FC" >> .bash_profile `
     && echo "export CXX=$CXX" >> .bash_profile `
