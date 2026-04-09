@@ -18,6 +18,7 @@ EOF
 USER root
 WORKDIR /root
 RUN <<EOF
+echo "export SYSTEMNAME=UBUNTU"                                >> .bash_profile
 echo "export CC=mpicc FC=mpif90 CXX=mpicxx"                    >> .bash_profile
 echo "export OMPI_ALLOW_RUN_AS_ROOT=1"                         >> .bash_profile
 echo "export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"                 >> .bash_profile
