@@ -1,64 +1,106 @@
 # escape=`
-FROM ubuntu:22.04
+FROM centos:8.2.2004
 
-#
-# TODO: Specify image metadata following OCI format spec: https://github.com/opencontainers/image-spec/blob/main/spec.md
-#
-# LABEL ...
+# Image metadata for documentation purposes. Has no effect on docker build behavior.
+LABEL `
+    org.label-schema.schema-version="1.0" `
+    org.label-schema.name="CLM5.0 Development Environment" `
+    org.label-schema.version="0.4" `
+    org.label-schema.vendor="IBG-3" `
+    org.label-schema.license="GPLv2" `
+    org.label-schema.build-date="20201111" `
+    clm.version.major="5" `
+    clm.env.compiler="GCC" `
+    clm.env.compiler.version="8.3.1" `
+    clm.env.mpi="OpenMPI" `
+    clm.env.mpi.version="4.0.2-2" `
+    clm.env.cmake.version="3.18" `
+    clm.env.pnetcdf.version="1.12.1" `
+    clm.env.netcdf-c.version="4.7.0" `
+    clm.env.netcdf-fortran.version="4.5.2-3" `
+    clm.env.esmf.version="8.0.1"
 
+# Import cime config files to image
+WORKDIR /tmp/.cime
+COPY cime_config/* /tmp/.cime/
 
-# Download basic utilities and compilers from Ubuntu apt repo
-RUN DEBIAN_FRONTEND=noninteractive apt-get update `
-    && apt-get install -y sudo nano git wget tree cmake python3.10 `
-    && apt-get install -y gcc-10 gfortran-10 g++-10 openmpi-bin libopenmpi-dev `
-    && apt-get install -y libhdf5-openmpi-dev libhdf5-openmpi-hl-fortran-100 hdf5-helpers liblapack-dev libblas-dev `
-    && apt-get install -y netcdf-bin libnetcdf-dev libnetcdff-dev libpnetcdf-dev nco 
-
-RUN apt-get install -y libxml++2.6-dev libxml2-utils cpanminus `
+# Install required packages from base repo
+RUN dnf update -y `
+    && dnf group install -y "Development Tools" `
+    && dnf install -y glibc-langpack-en libcurl-devel man-db man-pages passwd sudo vim wget which tree `
+                      perl-App-cpanminus python38 python38-pip `
+                      epel-release `
+    && dnf config-manager --set-enabled PowerTools `
+    `
+# Install required packages from EPEL and SCL repos
+    && dnf install -y hdf5-devel lapack-devel ncl nco netcdf-devel netcdf-fortran netcdf-fortran-devel openssl-devel openmpi openmpi-devel `
+    && dnf clean all `
+    `
+# misc
+    && ln -s /usr/bin/python3 /usr/bin/python `
     && cpanm bigint && cpanm XML::LibXML
 
-RUN ln -sf /usr/bin/python3 /usr/bin/python `
-    && ln -sf /usr/bin/gcc-10 /usr/bin/gcc `
-    && ln -sf /usr/bin/g++-10 /usr/bin/g++ `
-    && ln -sf /usr/bin/gfortran-10 /usr/bin/gfortran
+# Required envs for building libraries
+ENV ESMF_DIR=/tmp/bld/esmf-ESMF_8_0_1
+ENV ESMF_INSTALL_PREFIX=/usr/local
+ENV ESMF_INSTALL_MODDIR=include
+ENV ESMF_INSTALL_LIBDIR=lib
+ENV ESMF_INSTALL_BINDIR=bin
+ENV PATH="/usr/lib64/openmpi/bin:${PATH}"
 
-ENV CC=mpicc FC=mpifort CXX=mpicxx
-
-# Install ESMF
-RUN cd /tmp `
+# Install CMake
+RUN mkdir -vp /tmp/bld `
+    && cd /tmp/bld `
+    && wget -c https://github.com/Kitware/CMake/releases/download/v3.18.4/cmake-3.18.4.tar.gz `
+    && tar zxf cmake-3.18.4.tar.gz && cd cmake-3.18.4 `
+    && ./bootstrap && make && make install `
+    `
+# PnetCDF
+    && cd /tmp/bld `
+    && wget -c https://github.com/Parallel-NetCDF/PnetCDF/archive/checkpoint.1.12.1.tar.gz `
+    && tar zxf checkpoint.1.12.1.tar.gz `
+    && cd PnetCDF-checkpoint.1.12.1 `
+    && autoreconf -i `
+    && ./configure --prefix=/usr/local && make -j && make install `
+    `
+# Build and install ESMF libraries
+    && cd /tmp/bld `
     && wget -c https://github.com/esmf-org/esmf/archive/ESMF_8_0_1.tar.gz `
     && tar zxf ESMF_8_0_1.tar.gz `
     && cd esmf-ESMF_8_0_1 `
-    && export ESMF_DIR=$(pwd) `
-    && export ESMF_PREFIX=/usr ESMF_INSTALL_MODDIR=include ESMF_INSTALL_LIBDIR=lib ESMF_INSTALL_BINDIR=bin `
-    && export ESMF_F90COMPILEOPTS_ENV="-fallow-argument-mismatch" `
-    && make -j8 && make install `
-    && cd / && rm -rvf ESMF_8_0_1.tar.gz esmf-ESMF_8_0_1
+    && make -j && make install `
+    `
+# Cleanup
+    && cd /tmp && rm -rf /tmp/bld
 
 # Add user account
-RUN groupadd hpscterrsys `
-    && useradd user -g hpscterrsys -m `
-    && usermod -aG hpscterrsys user `
-    && adduser user sudo `
-    && printf "clm\nclm" | passwd user
+WORKDIR /home
 
-# Set default envs
-RUN cd /home/user `
-    && echo "export CC=$CC" >> .bash_profile `
-    && echo "export FC=$FC" >> .bash_profile `
-    && echo "export CXX=$CXX" >> .bash_profile `
-    && echo "export USER=$(whoami)" >> .bash_profile `
-    && echo "export CESMDATAROOT=/home/user/CESMDATAROOT" >> .bash_profile `
-    && echo "export CCSMROOT=/home/user" >> .bash_profile `
-    && echo "alias ll='ls -phAlv'" >> .bash_profile
+RUN groupadd -g 1555 clm5docker `
+    && useradd clmuser -g clm5docker`
+    && echo clm5 | passwd --stdin clmuser `
+    && usermod -aG wheel clmuser `
+    && rm /run/nologin `
+    `
+# Set compiler and library paths for CLM5
+    && echo "" >> /home/clmuser/.bash_profile `
+    && echo "# Set compiler and library paths for CLM5" >> /home/clmuser/.bash_profile `
+    && echo "export PATH=/usr/lib64/openmpi/bin:$PATH" >> /home/clmuser/.bash_profile >> /home/clmuser/.bash_profile `
+    && echo "source /etc/profile.d/ncarg.sh" >> /home/clmuser/.bash_profile `
+    `
+# Set CLM5 environment variables
+    && echo "" >> /home/clmuser/.bash_profile `
+    && echo "# CLM5 environment variables" >> /home/clmuser/.bash_profile `
+    && echo "" >> /home/clmuser/.bash_profile `
+    && echo "export PROJECT=/p/project" >> /home/clmuser/.bash_profile `
+    && echo "export SCRATCH=/p/scratch" >> /home/clmuser/.bash_profile `
+    && echo "export BUDGET_ACCOUNTS=slts" >> /home/clmuser/.bash_profile `
+    && echo "export CESMDATAROOT=/p/scratch/CESMDATAROOT" >> /home/clmuser/.bash_profile `
+    && echo "export CSMDATA=\$CESMDATAROOT/inputdata" >> /home/clmuser/.bash_profile `
+    `
+# Copy cime config files to home directory
+    && mv /tmp/.cime /home/clmuser/.cime
 
-# .cime folder
-RUN mkdir /home/user/.cime && cd /home/user/.cime `
-    && wget https://raw.githubusercontent.com/HPSCTerrSys/containers/refs/heads/master/clm5/cime_config/config_compilers.xml `
-    && wget https://raw.githubusercontent.com/HPSCTerrSys/containers/refs/heads/master/clm5/cime_config/config_machines.xml `
-    && mkdir -p /home/user/CESMDATAROOT/inputdata `
-    && chown -R user /home/user
-
-USER user
-WORKDIR /home/user
+USER clmuser
+WORKDIR /home/clmuser
 CMD ["/bin/bash","-l"]
